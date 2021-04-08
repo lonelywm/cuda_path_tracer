@@ -1,0 +1,14 @@
+*
+!/*
+
+!/.gitignore
+!/CMakelists.txt
+!/LICENSE
+!/README.md
+
+!/core/**
+!/include/**
+!/rc/**
+!/test/**
+!/utils/**
+
