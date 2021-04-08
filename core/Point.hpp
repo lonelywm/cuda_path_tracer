@@ -5,5 +5,6 @@ struct Point {
     Vec3f Pos;
     Vec3f Nor;
     Vec2f Tex;
-    uint MaterialId;
+    uint MIds[MAX_MATERIAL_COUNT];  // used in device; MaterialIds
+    uint MNum;                      // Material Count
 };

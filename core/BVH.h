@@ -35,7 +35,7 @@ public:
     uint*    _objectIds;       // in device
     BVHNode* _leafNodes;       // in device
     BVHNode* _internalNodes;   // in device
-    Vec3f*   _poss;
+    Point*   _pts;
     uint*    _indices;
 
     // These are stored in the scene
@@ -48,13 +48,16 @@ public:
 public:
     ~BVH();
     void setup (
-        Vec3f* poss, uint* indices,
-        BoundingBox* mBBoxs, int numTriangles, Vec3f min, Vec3f max
+        Point* poss,
+        uint* indices, 
+        BoundingBox* mBBoxs, 
+        int numTriangles, 
+        Vec3f min, 
+        Vec3f max
     );
-
-        
+    
     __device__
-    Intersection intersect(int idx, const Ray& ray, Vec3f* poss, uint* indices, BVHNode* internalNodes, BVHNode* leafNodes) {
+    Intersection intersect(int idx, const Ray& ray, Point* pts, uint* indices, Material* materials, BVHNode* internalNodes, BVHNode* leafNodes) {
         Intersection isect;
         // if (!(idx == 565)) return isect;
 
@@ -87,7 +90,7 @@ public:
                 if (node.IsLeaf) {
                     // printf("*");
                     int index = node.ObjectId;
-                    auto tri = Triangle(poss[indices[3*index]], poss[indices[3*index+1]], poss[indices[3*index+2]]);
+                    auto tri = Triangle(pts[indices[3*index]].Pos, pts[indices[3*index+1]].Pos, pts[indices[3*index+2]].Pos);
                     auto intersect = tri.intersect(ray);
                     // printf(
                     //     "P0(%f, %f, %f) P1(%f, %f, %f) P2(%f, %f, %f)"

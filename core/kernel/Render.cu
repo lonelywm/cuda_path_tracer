@@ -21,7 +21,11 @@ inline float clamp(const float &lo, const float &hi, const float &v)
 // }
 
 __global__
-void rendKernel(Vec3f* buf, BVH* bvh, BVHNode* leafNodes, BVHNode* internalNodes, Vec3f* poss, uint* indices, int width, int height, float fov) {
+void rendKernel(
+    Vec3f* buf, BVH* bvh, BVHNode* leafNodes, BVHNode* internalNodes,
+    Point* pts, uint* indices, Material* materials, 
+    int width, int height, float fov
+) {
     int idx = threadIdx.x + blockDim.x * blockIdx.x;
     if (idx > width * height) return;
     int y = idx / width;
@@ -48,7 +52,7 @@ void rendKernel(Vec3f* buf, BVH* bvh, BVHNode* leafNodes, BVHNode* internalNodes
     //     return;
     // }
 
-    Intersection isect = bvh->intersect(idx, ray, poss, indices, internalNodes, leafNodes);
+    Intersection isect = bvh->intersect(idx, ray, pts, indices, materials, internalNodes, leafNodes);
 
     if (isect.happened) {
         buf[idx].x = 1;
@@ -75,7 +79,7 @@ void Render::rend(Scene* scene, int width, int height, int spp) {
 
     int threadsPerBlock = 256;
     int blocksPerGrid = (width*height + threadsPerBlock - 1) / threadsPerBlock;
-    rendKernel<<<blocksPerGrid, threadsPerBlock>>>(_buffer, &scene->_bvh, scene->_bvh._leafNodes, scene->_bvh._internalNodes, scene->_poss, scene->_indices, width, height, 40);
+    rendKernel<<<blocksPerGrid, threadsPerBlock>>>(_buffer, &scene->_bvh, scene->_bvh._leafNodes, scene->_bvh._internalNodes, scene->_pts, scene->_indices, scene->_materials, width, height, 40);
 }
 
 __device__

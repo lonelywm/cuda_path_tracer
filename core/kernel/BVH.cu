@@ -215,7 +215,6 @@ void generateHierarchyKernel(
     // printf("P %d     ", internalNodes[idx]);
 }
 
-
 __global__
 void infoBBoxesKernel(BVHNode* leafNodes, BVHNode* internalNodes, int numTriangles) {
     BVHNode* nodes = leafNodes;
@@ -279,7 +278,6 @@ void computeBBoxesKernel(BVHNode* leafNodes, BVHNode* internalNodes, int numTria
     }
 }
 
-
 __global__ 
 void setupLeafNodesKernel(uint* sorted_object_ids, BVHNode* leafNodes, BoundingBox* bboxes, int numTri) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -308,10 +306,9 @@ void printfMortonCodes(uint* mortonCodes, int count) {
 
 // BVH ==============================================================
 void BVH::setup(
-    Vec3f* poss, uint* indices,
-    BoundingBox* mBBoxs, int numTriangles, Vec3f min, Vec3f max
+    Point* pts, uint* indices, BoundingBox* mBBoxs, int numTriangles, Vec3f min, Vec3f max
 ) {
-    _poss = poss;
+    _pts = pts;
     _indices = indices;
     _bboxs = mBBoxs;
 
