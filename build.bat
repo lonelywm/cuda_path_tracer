@@ -1,5 +1,5 @@
 cd build
-cmake ..
+@REM cmake ..
 cmake --build .
 cd ..
 

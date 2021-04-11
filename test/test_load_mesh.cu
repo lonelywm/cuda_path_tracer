@@ -2,9 +2,18 @@
 #include <Loader.hpp>
 #include <iostream>
 
+__device__ 
+void testtt(int& d ) {
+    d++;
+    d += 2;
+}
+
 
 __global__
 void test(Vec3f vec, float a) {
+    int c = 1;
+    c--;
+    testtt(c);
     printf("%f, %f, %f, %f", vec.x, vec.y, vec.z, a);
 }
 

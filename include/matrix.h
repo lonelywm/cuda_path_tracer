@@ -28,7 +28,12 @@ class Vec3f{
             z = other.z;
         }
 
-        __host__ __device__
+        __host__ __device__ __inline__
+        bool isZero() {
+            return x==0 && y==0 && z==0;
+        }
+
+        __host__ __device__ __inline__
         Vec3f& operator = (const Vec3f& other) {
             x = other.x;
             y = other.y;
@@ -36,13 +41,13 @@ class Vec3f{
             return *this;
         }
 
-        __host__ __device__
+        __host__ __device__ __inline__
         Vec3f& operator = (float a){ x = a; y = a; z = a; return *this; }
 
-        __host__ __device__
+        __host__ __device__ __inline__
         Vec3f& operator /= (float a){ x /= a; y /= a; z /= a; return *this; }
         
-        __host__ __device__
+        __host__ __device__ __inline__
         Vec3f operator - () const { return Vec3f(-x, -y, -z); }
 
         __host__ __device__ __inline__
@@ -51,24 +56,30 @@ class Vec3f{
         __host__ __device__ __inline__
         float operator [] (int i) const { if (i == 0) {return x;} return i == 1 ? y : z; }
         
-        __host__ __device__
+        __host__ __device__ __inline__
         Vec3f& operator *= (float a){ x *= a; y *= a; z *= a; return *this; }
         
-        __host__ __device__
+        __host__ __device__ __inline__
         Vec3f& operator %= (const Vec3f& a){ x *= a.x; y *= a.y; z *= a.z; return *this; }
         
-        __host__ __device__
+        __host__ __device__ __inline__
         Vec3f& operator -= (const Vec3f& a){ x -= a.x; y -= a.y; z -= a.z; return *this; }
-        __host__ __device__
+        
+        __host__ __device__ __inline__
         Vec3f& operator += (const Vec3f& a){ x += a.x; y += a.y; z += a.z; return *this; }
 
-        __host__ __device__
-        inline Vec3f cross(const Vec3f &a) const {
+        __host__ __device__ __inline__
+        Vec3f cross(const Vec3f &a) const {
             return Vec3f(
                 y * a.z - z * a.y,
                 z * a.x - x * a.z,
                 x * a.y - y * a.x
             );
+        }
+
+        __host__ __device__ __inline__
+        float dot(const Vec3f& a) const {
+            return x * a.x + y * a.y + z * a.z;
         }
 
         __host__ __device__ __inline__
@@ -81,11 +92,16 @@ class Vec3f{
         float norm(){
             return sqrtf(x*x + y*y + z*z);
         }
+
+        __host__ __device__ __inline__
+        float norm2(){
+            return x*x + y*y + z*z;
+        }
 };
 
 __host__ __device__ __inline__
-float operator * (const Vec3f& a, const Vec3f& b){
-    return a.x*b.x + a.y*b.y + a.z*b.z;
+Vec3f operator * (const Vec3f& a, const Vec3f& b){
+    return Vec3f(a.x*b.x, a.y*b.y, a.z*b.z);
 }
 
 __host__ __device__ __inline__
@@ -265,10 +281,12 @@ __host__ __device__ __inline__
 Vec3f multxT_A(const Vec3f& f, const Mat3f& A){
     return multAT_x(A, f); // Same value except this one should be treated as transposed
 }
+
 __host__ __device__ __inline__
 Vec3f operator * (const Mat3f& a, const Vec3f& f){
-    return Vec3f(a.x*f, a.y*f, a.z*f);
+    return Vec3f(a.x.dot(f), a.y.dot(f), a.z.dot(f));  // TODO.
 }
+
 class Mat4f{
     public:
         Vec4f x; //Row 1

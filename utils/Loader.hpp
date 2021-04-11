@@ -65,7 +65,7 @@ private:
     {
         std::vector<Point>   vertices;
         std::vector<uint>    indices;
-        std::vector<Material> materials;
+        Material material;
         // walk through each of the mesh's vertices
         for(unsigned int i = 0; i < mesh->mNumVertices; i++)  {
             Point pt;
@@ -119,7 +119,7 @@ private:
         // std::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
         // textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
         // return a mesh object created from the extracted mesh data
-        return new Mesh(vertices, indices, materials);
+        return new Mesh(vertices, indices, material);
     }
 };
 

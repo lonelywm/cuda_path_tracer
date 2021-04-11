@@ -2,18 +2,20 @@
 #include <pch.h>
 #include "Scene.h"
 
-
 class Render {
 public:
     
-    void rend(Scene* scene, int width, int height, int spp);
+    void rend(Scene* scene, int width, int height, int spp, int maxTraceDepth = 4);
     void output();
 
     __device__
     void shade(const Intersection& isect, const Vec3f& indir);
 
-    __device__
-    void sampleLight(Vec3f* poss, uint* indices, int numTri, Intersection &pos, float &pdf, curandState_t& randState) const;
+public:
+    float* _emitAreas;        // device 发光面积
+    float  _emitAreaSum = 0;  // 发光面积总数
+    uint   _emitAreaNum = 0;  // 发光物体数
+    uint*  _emitAreaIds;      // 发光物体的排序 （面积大的在前面，不发光的面积=0）
 
 public:
     Vec3f* _buffer;

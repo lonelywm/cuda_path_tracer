@@ -7,18 +7,16 @@
 #include "BVH.h"
 
 
-class MeshD {  // for device
-};
 
 class Mesh {
 public:
     Vector<Point>    Points;
     Vector<uint>     Indices;
-    Vector<Material> Materials;
+    Material         Mtrl;
     
 public:
-    Mesh(CVector<Point>& pts, CVector<uint>& indices, CVector<Material>& materials)
-    : Points(pts), Indices(indices), Materials(materials) 
+    Mesh(CVector<Point>& pts, CVector<uint>& indices, Material& material)
+    : Points(pts), Indices(indices), Mtrl(material) 
     {
     }
 

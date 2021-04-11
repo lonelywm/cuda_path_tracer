@@ -75,7 +75,7 @@ public:
             float max = (Max[i] - origin[i]) / ray.Dir[i];
 
             // Fix Zero
-            if (ray.Dir[i] == 0) {
+            if (ray.Dir[i]== 0) {
                 min = (Min[i] - origin[i] <= 0) ? std::numeric_limits<Real>::lowest() : std::numeric_limits<Real>::max();
                 max = (Max[i] - origin[i] >= 0) ? std::numeric_limits<Real>::max() : std::numeric_limits<Real>::lowest();
             }
@@ -89,14 +89,8 @@ public:
                 tExit  = max < tExit  ? max : tExit;
             }
 
-            if (debug)
-                printf("%f %f %f %f\n", min, max, tEnter, tExit);
         }
-        if (debug) {
-            printf("###%d, Dir XYZ: %3f, %3f, %3f, enter: %04f exit: %04f\n", tEnter <= tExit, ray.Dir.x, ray.Dir.y, ray.Dir.z, tEnter, tExit);
-            printf("###Min: %3f, %3f, %3f Max: %3f, %3f, %3f\n", Min.x, Min.y, Min.z, Max.x, Max.y, Max.z);
-            printf("%d\n", tEnter <= tExit && tExit >= 0);
-        }
+
         
         return tEnter <= tExit && tExit >= 0;
     }

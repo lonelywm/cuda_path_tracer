@@ -8,6 +8,9 @@ public:
 
 public:
     __host__ __device__
+    Ray() {}
+
+    __host__ __device__
     Ray(const Vec3f &p, const Vec3f &d): Pos(p), Dir(d) {}
 
     __host__ __device__

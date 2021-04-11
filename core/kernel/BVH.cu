@@ -1,6 +1,7 @@
 #include <pch.h>
 #include <thrust/sort.h>
 #include <thrust/device_ptr.h>
+
 #include "../Triangle.hpp"
 #include "../BVH.h"
 
@@ -347,6 +348,11 @@ void BVH::setup(
     computeBBoxesKernel<<<blocksPerGrid, threadsPerBlock>>>(
         _leafNodes, _internalNodes, numTriangles
     );
+
+    // Vector<BVHNode> inters;
+    // inters.resize(numTriangles-1);
+    // cudaMemcpy(&inters[0], _internalNodes, (numTriangles-1) * sizeof(BVHNode), cudaMemcpyDeviceToHost);
+    // printf("...");
 }
 
 BVH::~BVH(){

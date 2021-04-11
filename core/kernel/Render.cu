@@ -2,106 +2,250 @@
 #include "../BVH.h"
 #include <curand_kernel.h>
 #include <fstream>
+#include <thrust/device_ptr.h>
+#include <thrust/device_vector.h>
+#include <thrust/sort.h>
+#include <thrust/functional.h>
 
 
-#undef M_PI
-#define M_PI 3.141592653589793f
-
-__device__ float deg2rad(const float& deg) { return deg * M_PI / 180.0; }
+__device__ float deg2rad(const float& deg) { return deg * PI / 180.0; }
 
 __device__ __host__
 inline float clamp(const float &lo, const float &hi, const float &v)
 { return std::max(lo, std::min(hi, v)); }
 
-// __global__
-// void randInitKernel() {
-//     int idx = threadIdx.x + blockDim.x * blockIdx.x;
-//     int blockId = blockDim
-//     curand_init(idx);
-// }
+__device__
+void sampleLight(
+    Intersection &isect, float &pdf, Point* pts, Geometry* geos, Material* materials,
+    float* emitAreas, float& emitAreaSum, uint emitAreaNum, uint* emitAreaIds, curandState_t& randState
+) {
+    float p = curand_uniform(&randState) * emitAreaSum;
+    float start = 0;
+    
+    // find whice Geometry (index) to sample from
+    uint index = -1;
+    for (int i=0; i<emitAreaNum; i++) {
+        start += emitAreas[i];
+        if (start >= p) {
+            index = emitAreaIds[i];
+            break;
+        }
+    }
+
+    // printf("%d %d %d %d\n", emitAreaIds[0], emitAreaIds[1], emitAreaIds[2], emitAreaIds[3]);
+    // printf("(AL: %f, P: %f, S: %f ,0: %f, I:%d) \n", emitAreaSum, p, start, emitAreas[0], index);
+
+    if (index != -1) {
+        geos[index].update(pts, materials).sample(isect, pdf, randState);
+        int MatId = geos[index].MatId;
+        if (MatId >= 0) {
+            isect.Mtrl = materials[MatId];
+            // printf("M(%d, %d) ", index, MatId);
+        }
+        // printf("sample succ\n");
+    }
+    
+}
+
+__global__ /* calculate all emitArea */
+void calculateLightArea(
+    float* emitAreas, uint* emitAreaIds, int triangles, Point* pts, uint* indices,
+    Geometry* geos, Material* materials
+) {
+    uint idx = threadIdx.x + blockDim.x * blockIdx.x;
+    if (idx >= triangles) return;
+
+    emitAreaIds[idx] = idx;
+    Geometry& geo = geos[idx];
+    geo.update(pts, materials);
+    emitAreas[idx] = geo.Emit * geo.Area;
+    // printf("init Light %d (%f) N: %f, Emit: %d\n", idx, emitAreas[idx], geo.Area, geo.Emit);
+    // TODO. 优化规约求和
+}
 
 __global__
 void rendKernel(
     Vec3f* buf, BVH* bvh, BVHNode* leafNodes, BVHNode* internalNodes,
-    Point* pts, uint* indices, Material* materials, 
-    int width, int height, float fov
+    Point* pts, uint* indices, Geometry* geos, Material* materials,
+    float* emitAreas, float emitAreaSum, uint emitAreaNum, uint* emitAreaIds,
+    int width, int height, float fov, int maxTraceDepth
 ) {
-    int idx = threadIdx.x + blockDim.x * blockIdx.x;
+    int idx = blockIdx.x;
+    int tid = threadIdx.x;
+    int dpp = blockDim.x;
+    __shared__ Vec3f pixels[MAX_DPP];
+
+    const float EPS = 0.002f;
+
     if (idx > width * height) return;
     int y = idx / width;
     int x = idx % width;
     float scale = tan(deg2rad(fov * 0.5));           // dep    / height
     float imageAspectRatio = width / (float)height;  // width  / height
 	Vec3f eye_pos(278, 273, -800);                   // eye
-    float dx = 0;
-    float dy = 0;
+    
 
-    // curandState_t randState;
-    // curand_init(idx, threadIdx.x, 0, &randState);
+    curandState_t randState;
+    curand_init(idx * blockDim.x + tid, tid, 0, &randState);
+
+    float dx = curand_uniform(&randState);
+    float dy = curand_uniform(&randState);
 
     float _x = ( 2 * (x + dx)/(float)width - 1 ) * imageAspectRatio * scale;
     float _y = ( 2 * (y + dy)/(float)height - 1) * scale;
     Vec3f dir(-_x, -_y, 1);
-    // dir.x = 0.1;
-    // dir.y=0.2;
-    // dir.z = 1;
-    dir = dir.normalize();
-    Ray ray(eye_pos, dir);
-    // if (idx == 0) {
-    // } else {
-    //     return;
-    // }
 
-    Intersection isect = bvh->intersect(idx, ray, pts, indices, materials, internalNodes, leafNodes);
+    // 用一组变量来将递归变成循环
+    // 保留每一步结果的ray,乘法系数,递归深度,是否结束等
+    Ray rays[MAX_TRACE_DEPTH+1];
+    int raysNum = 0;
+    Vec3f alphas[MAX_TRACE_DEPTH+1];
+    Vec3f beta[MAX_TRACE_DEPTH + 1];
+    bool feedback = false;
+    
 
-    if (isect.happened) {
-        buf[idx].x = 1;
-        buf[idx].y = isect.t / 1400;
-        buf[idx].z = isect.t / 1400;
-    } else {
-        buf[idx].x = 0;
-        buf[idx].y = 0;
-        buf[idx].z = 0;
+    {
+        dir = dir.normalize();
+        rays[raysNum] = Ray(eye_pos, dir);
+        raysNum++;
     }
 
-    // if ((idx == 525 || idx == 526)) 
-    // printf("IDX:%d dir xyz %f, %f, %f (%f)\n", idx, dir.x, dir.y, dir.z, isect.t);
-    // printf("==%4f, %4f, %4f\n", internalNodes[0].BBox.Max.x, internalNodes[0].BBox.Max.y, internalNodes[0].BBox.Max.z);
-    // printf("--%4f, %4f, %4f\n", leafNodes[0].BBox.Max.x, leafNodes[0].BBox.Max.y, leafNodes[0].BBox.Max.z);
+    //if (idx == 36428) {
+    //    idx = 36428;
+    //}
+
+    pixels[tid] = 0;
+    while (!feedback && raysNum < maxTraceDepth) {
+        Ray& ray = rays[raysNum - 1];
+        Intersection isectObj = bvh->intersect(idx, ray, pts, indices, geos, materials, internalNodes, leafNodes);
+        feedback = true;
+        if (isectObj.Happened) {
+            if (isectObj.Mtrl.hasEmission()) {
+                beta[raysNum-1] = isectObj.Mtrl.ke;
+            }
+            else {
+                // 直接光照
+                Vec3f Lo_dir;
+                {
+                    float lightPdf;
+                    Intersection isectSample;
+                    sampleLight(isectSample, lightPdf, pts, geos, materials, emitAreas, emitAreaSum, emitAreaNum, emitAreaIds, randState);
+                    Vec3f obj2Light = isectSample.Pos - isectObj.Pos;
+                    Vec3f obj2LightDir = obj2Light.normalize();
+
+                    // 光线是否被遮挡(从采样点发出一条光线，然后当成射线头像物体的交点，查看交点距离与物体到光采样点的距离)
+                    Ray dirRay(isectObj.Pos, obj2LightDir);
+                    auto lightIsect = bvh->intersect(idx, dirRay, pts, indices, geos, materials, internalNodes, leafNodes);
+
+                    float dist = lightIsect.distance(obj2LightDir);
+                    float norm = obj2Light.norm();
+                    if (lightIsect.distance(obj2LightDir) - obj2Light.norm() > -EPS)
+                    {
+                        //     // Vec f_r = isectObj.Mtrl->eval(obj2LightDir, wo, hit_obj.normal);
+                        Vec3f f_r = isectObj.Mtrl.eval(obj2LightDir, -ray.Dir, isectObj.N);
+                        float r2 = obj2Light.norm2();
+                        float cosA = isectObj.N.dot(obj2LightDir);
+                        float cosB = isectSample.N.dot(-obj2LightDir);
+                        if (cosA < 0) cosA = 0;
+                        if (cosB < 0) cosB = 0;
+                        Lo_dir = isectSample.Mtrl.ke * f_r * cosA * cosB / r2 / lightPdf;
+                    }
+                }
+                beta[raysNum - 1] = Lo_dir;
+                // 间接光照
+                Vec3f Lo_indir;
+                {
+                    if (curand_uniform(&randState) < RussianRoulette)
+                    {
+                        // Geometry& hitObj = geos[isectObj.GeoId];
+                        // 在此物体上采样（按方向）
+                        Vec3f sampleDir = isectObj.Mtrl.sample(isectObj.N, randState);
+                        float pdf = isectObj.Mtrl.pdf(sampleDir, isectObj.N);
+                        if (pdf > EPS) {
+                            Ray toNext(isectObj.Pos, sampleDir);
+                            Intersection nextObjIsect = bvh->intersect(idx, toNext, pts, indices, geos, materials, internalNodes, leafNodes);
+                            if (nextObjIsect.Happened && nextObjIsect.Mtrl.ke.norm2() <= 0) {  // !!!ke.norm2() <= 0
+                                Vec3f fr = isectObj.Mtrl.eval(sampleDir, -ray.Dir, isectObj.N);
+                                float cos = sampleDir.dot(isectObj.N);
+                                if (cos <= 0) cos = 0;
+                                Vec3f alpha = fr * cos / pdf / RussianRoulette;
+                                alphas[raysNum - 1] = alpha;
+                                rays[raysNum] = Ray(isectObj.Pos, sampleDir);
+                                raysNum++;
+                                feedback = false;
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+
+            }
+        }  // if happend
+    }  // end for
+
+
+    //if (raysNum >= 5) {
+    //    printf("");
+    //}
+
+    Vec3f result;
+    while (raysNum > 0) {
+        result = result * alphas[raysNum-1] + beta[raysNum-1];
+        raysNum--;
+    }
+    pixels[tid] = result;
+
+
+    __syncthreads();
+    for (int stride = dpp/2; stride>0; stride/=2) {
+        if (tid < stride) pixels[tid] += pixels[tid + stride];
+        __syncthreads();
+    }
+
+    if (tid == 0) {
+        buf[idx] = pixels[0] / dpp;
+        //if (idx == 36428) {
+        //    buf[idx] = Vec3f(1, 0, 0);
+        //}
+    }
+
 }
 
 // Render ================================================
-void Render::rend(Scene* scene, int width, int height, int spp) {
+void Render::rend(Scene* scene, int width, int height, int spp, int maxTraceDepth) {
     _width = width;
     _height = height;
     cudaMalloc((void**)&_buffer, _width * _height * sizeof(Vec3f));
     framebuffer.resize(_width * _height * 12);
 
-    int threadsPerBlock = 256;
-    int blocksPerGrid = (width*height + threadsPerBlock - 1) / threadsPerBlock;
-    rendKernel<<<blocksPerGrid, threadsPerBlock>>>(_buffer, &scene->_bvh, scene->_bvh._leafNodes, scene->_bvh._internalNodes, scene->_pts, scene->_indices, scene->_materials, width, height, 40);
-}
+    cudaMalloc((void**)&_emitAreas, scene->_numTri * sizeof(float));
+    cudaMalloc((void**)&_emitAreaIds, scene->_numTri * sizeof(uint));
 
-__device__
-void Render::sampleLight(Vec3f* poss, uint* indices, int numTri, Intersection &pos, float &pdf, curandState_t& randState) const
-{
-    float emit_area_sum = 0;
-    // for (uint32_t i = 0; i < numTri; ++k) {
-    //     if (objects[k]->hasEmit()) {
-    //         emit_area_sum += objects[k]->Area;
-    //     }
-    // }
-    // float p = get_random_float() * emit_area_sum;  // [0~1]*13650    
-    // emit_area_sum = 0;
-    // for (uint32_t k = 0; k < objects.size(); ++k) {
-    //     if (objects[k]->hasEmit()){
-    //         emit_area_sum += objects[k]->Area;
-    //         if (p <= emit_area_sum){//random get the first area > p light,return                
-    //             objects[k]->Sample(pos, pdf);
-    //             break;
-    //         }
-    //     }
-    // }
+    int threadsPerBlock = 256;
+    int blocksPerGridForGeometry = (scene->_numTri + threadsPerBlock - 1) / threadsPerBlock;
+    calculateLightArea<<<blocksPerGridForGeometry, threadsPerBlock>>>(_emitAreas, _emitAreaIds, scene->_numTri, scene->_pts,
+        scene->_indices, scene->_geos, scene->_materials);
+
+    thrust::device_ptr<float> dev_emitAreas(_emitAreas);
+    thrust::device_ptr<unsigned int> dev_emitAreaIds(_emitAreaIds);
+    thrust::sort_by_key(dev_emitAreas, dev_emitAreas + scene->_numTri, dev_emitAreaIds, thrust::greater<float>());
+
+    Vector<float> buf(scene->_numTri);
+    cudaMemcpy(&buf[0], _emitAreas, scene->_numTri * sizeof(float), cudaMemcpyDeviceToHost);
+
+    _emitAreaSum = 0;
+    for (int i=0; i<scene->_numTri; i++) {
+        _emitAreaSum += buf[i];
+        if (buf[i] > 0) _emitAreaNum++;
+        else break;
+    }
+
+    rendKernel<<<width*height, spp>>>(
+        _buffer, &scene->_bvh, scene->_bvh._leafNodes, scene->_bvh._internalNodes,
+        scene->_pts, scene->_indices, scene->_geos, scene->_materials,
+        _emitAreas, _emitAreaSum, _emitAreaNum, _emitAreaIds,
+        width, height, 40, maxTraceDepth);
 }
 
 __device__

@@ -10,6 +10,8 @@ public:
     Point* _pts;          // device
     uint* _indices;       // device
     Material* _materials; // device
+    Geometry* _geos;      // device
+
     int _numPoints  = 0;
     int _numIndices = 0;
     int _numMaterials = 0;

@@ -57,77 +57,41 @@ public:
     );
     
     __device__
-    Intersection intersect(int idx, const Ray& ray, Point* pts, uint* indices, Material* materials, BVHNode* internalNodes, BVHNode* leafNodes) {
+    Intersection intersect(int idx, const Ray& ray, Point* pts, uint* indices, Geometry* geos, Material* materials, BVHNode* internalNodes, BVHNode* leafNodes) {
         Intersection isect;
-        // if (!(idx == 565)) return isect;
-
         BVHNode nodes[48];
         int ncount = 0;
         nodes[0] = *internalNodes[0].ChildA;
         nodes[1] = *internalNodes[0].ChildB;
         ncount += 2;
-        int loop = 0;
-        // printf("%4f, %4f, %4f", nodes[0].BBox.Max.x, nodes[0].BBox.Max.y, nodes[0].BBox.Max.z);
         while(ncount > 0) {
             BVHNode& node = nodes[ncount - 1];
-            loop++;
-
-            // printf("\n{ %d, %d, %d } [BOX]\n: max(%f, %f, %f) min(%f, %f, %f)[%d]\n\n", 
-            //     loop, idx, ncount,
-            //     node.BBox.Max.x, node.BBox.Max.y, node.BBox.Max.z,
-            //     node.BBox.Min.x, node.BBox.Min.y, node.BBox.Min.z,
-            //     node.BBox.intersect(ray, true)
-            // );
-
             if (node.BBox.intersect(ray)) {
-                // printf(
-                //     "+idx:%d, %d, %d, %d, %d, Max(%f, %f, %f) Min(%f, %f, %f) \n", 
-                //     idx, ncount, node.IsLeaf, node.ChildA->IsLeaf, node.ChildB->IsLeaf,
-                //     node.BBox.Max.x, node.BBox.Max.y, node.BBox.Max.z,
-                //     node.BBox.Min.x, node.BBox.Min.y, node.BBox.Min.z
-                // );
-                // printf("#[%d]", node.IsLeaf);
                 if (node.IsLeaf) {
-                    // printf("*");
                     int index = node.ObjectId;
-                    auto tri = Triangle(pts[indices[3*index]].Pos, pts[indices[3*index+1]].Pos, pts[indices[3*index+2]].Pos);
+                    auto tri = Geometry(pts[indices[3*index]].Pos, pts[indices[3*index+1]].Pos, pts[indices[3*index+2]].Pos);
                     auto intersect = tri.intersect(ray);
-                    // printf(
-                    //     "P0(%f, %f, %f) P1(%f, %f, %f) P2(%f, %f, %f)"
-                    //     "Ori(%f, %f, %f) Dir(%f, %f, %f)\n"
-                    //     "Happened(%d) Index(%d, %d %d %d)\n",
-                    //     poss[3*index].x, poss[3*index].y, poss[3*index].z,
-                    //     poss[3*index+1].x, poss[3*index+1].y, poss[3*index+1].z,
-                    //     poss[3*index+2].x, poss[3*index+2].y, poss[3*index+2].z,
-                    //     ray.Pos.x, ray.Pos.y, ray.Pos.z,
-                    //     ray.Dir.x, ray.Dir.y, ray.Dir.z,
-                    //     intersect.happened, index, 3*index, 3*index+1, 3*index+2
-                    // );
+                    intersect.GeoId = index;
 
-                    if (intersect.happened && (!isect.happened || (intersect.t > 0 && intersect.t < isect.t))  ) {
+                    if (intersect.Happened && (!isect.Happened || (intersect.t > 0 && intersect.t < isect.t))  ) {
                         isect = intersect;
-                        // printf("$ <<<%f>>>", intersect.t);
                     }
                 } else {
                     nodes[ncount]     = *node.ChildB;
                     nodes[ncount - 1] = *node.ChildA;  // replace current node, be very careful.
                     ncount += 2;
-                    // printf("@");
                 }
-                // printf("[END]\n");
             }
-
             ncount--;
         }
         // printf("\nEND %f\n", isect.t);
+        if (isect.Happened) {
+            Geometry& geo = geos[isect.GeoId];
+            isect.Mtrl = materials[geo.MatId];
+        }
         return isect;
     } // intersect
 
-
-
-    // void computeMortonCodesKernel(uint* mCodes, uint* objIds, BoundingBox* boxs, int numTri, Vec3f min, Vec3f max);
-    // void setupLeafNodesKernel();
-    // void computeBBoxesKernel(BVHNode* leafNodes, BVHNode* internalNodes, int numTriangles);
 };
 
 

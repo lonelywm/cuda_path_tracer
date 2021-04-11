@@ -58,31 +58,35 @@ void Scene::setupDevice() {
         for (auto* mesh: actor->Meshes) {
             _numPoints += mesh->Points.size();
             _numIndices += mesh->Indices.size();
-            _materials += mesh->Materials.size();
+            _numMaterials += 1;
         }
     }
     _numTri = _numIndices / 3;
-    cudaMalloc(&_pts,    _numPoints*sizeof(Point));
-    cudaMalloc(&_indices, _numIndices*sizeof(uint));
+    cudaMalloc(&_pts,       _numPoints*sizeof(Point));
+    cudaMalloc(&_indices,   _numIndices*sizeof(uint));
     cudaMalloc(&_materials, _numMaterials*sizeof(Material));
+    cudaMalloc(&_geos,      _numTri*sizeof(Geometry));
 
     int offsetPos = 0;
     int offsetIdx = 0;
     int offsetMaterial = 0;
+    int offsetGeo = 0;
     for (auto* actor: Actors) {
         for (auto* mesh: actor->Meshes) {
             Vector<Point> pts;
             for (auto pt: mesh->Points) { 
-                for (uint m = 0; m < mesh->Materials.size(); m++) {
-                    pt.MIds[m] = m + offsetMaterial;
-                }
                 pts.push_back(pt);
             }
             Vector<uint> indices;
+            Vector<Geometry> geos;
             for (auto& idx: mesh->Indices) {
                 indices.push_back(idx + offsetPos);  // Important and be carefull
             }
-
+            for (int i=0; i<mesh->Indices.size(); i+=3) {
+                Geometry geo(offsetPos + mesh->Indices[i], offsetPos + mesh->Indices[i+1], offsetPos + mesh->Indices[i+2]);
+                geo.MatId = offsetMaterial;
+                geos.push_back(geo);
+            }
             if (mesh->Points.size() > 0) {
                 cudaMemcpy(_pts + offsetPos, &pts[0], mesh->Points.size() * sizeof(Point), cudaMemcpyHostToDevice);
                 offsetPos += mesh->Points.size();
@@ -91,9 +95,13 @@ void Scene::setupDevice() {
                 cudaMemcpy(_indices + offsetIdx, &indices[0], mesh->Indices.size() * sizeof(uint), cudaMemcpyHostToDevice);
                 offsetIdx += mesh->Indices.size();  // Important and be carefull
             }
-            if (mesh->Materials.size() > 0) {
-                cudaMemcpy(_materials + offsetMaterial, &mesh->Materials[0], mesh->Materials.size() * sizeof(uint), cudaMemcpyHostToDevice);
-                offsetMaterial += mesh->Materials.size();
+            if (true) {
+                cudaMemcpy(_materials + offsetMaterial, &mesh->Mtrl, sizeof(Material), cudaMemcpyHostToDevice);
+                offsetMaterial += 1;
+            }
+            if (geos.size() > 0) {
+                cudaMemcpy(_geos + offsetGeo, &geos[0], geos.size() * sizeof(Geometry), cudaMemcpyHostToDevice);
+                offsetGeo += geos.size();
             }
         }
     }
