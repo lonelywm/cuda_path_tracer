@@ -68,14 +68,14 @@ void rendKernel(
     Vec3f* buf, BVH* bvh, BVHNode* leafNodes, BVHNode* internalNodes,
     Point* pts, uint* indices, Geometry* geos, Material* materials,
     float* emitAreas, float emitAreaSum, uint emitAreaNum, uint* emitAreaIds,
-    int width, int height, float fov, int maxTraceDepth
+    int width, int height, float fov, int maxTraceDepth, bool onlyDirectLight
 ) {
     int idx = blockIdx.x;
     int tid = threadIdx.x;
     int dpp = blockDim.x;
     __shared__ Vec3f pixels[MAX_DPP];
 
-    const float EPS = 0.002f;
+    const float EPS = 0.0001f;
 
     if (idx > width * height) return;
     int y = idx / width;
@@ -102,7 +102,6 @@ void rendKernel(
     Vec3f alphas[MAX_TRACE_DEPTH+1];
     Vec3f beta[MAX_TRACE_DEPTH + 1];
     bool feedback = false;
-    
 
     {
         dir = dir.normalize();
@@ -152,6 +151,8 @@ void rendKernel(
                     }
                 }
                 beta[raysNum - 1] = Lo_dir;
+                if (onlyDirectLight) break;
+
                 // 间接光照
                 Vec3f Lo_indir;
                 {
@@ -213,11 +214,16 @@ void rendKernel(
 }
 
 // Render ================================================
-void Render::rend(Scene* scene, int width, int height, int spp, int maxTraceDepth) {
+void Render::init(Scene* scene, int width, int height, int spp, int maxTraceDepth, bool onlyDirectLight) {
     _width = width;
     _height = height;
+    _scene = scene;
+    _spp = spp;
+    _maxTraceDepth = maxTraceDepth;
+    _onlyDirectLight = onlyDirectLight;
+
     cudaMalloc((void**)&_buffer, _width * _height * sizeof(Vec3f));
-    framebuffer.resize(_width * _height * 12);
+    framebuffer.resize(_width * _height);
 
     cudaMalloc((void**)&_emitAreas, scene->_numTri * sizeof(float));
     cudaMalloc((void**)&_emitAreaIds, scene->_numTri * sizeof(uint));
@@ -240,12 +246,30 @@ void Render::rend(Scene* scene, int width, int height, int spp, int maxTraceDept
         if (buf[i] > 0) _emitAreaNum++;
         else break;
     }
+}
 
-    rendKernel<<<width*height, spp>>>(
-        _buffer, &scene->_bvh, scene->_bvh._leafNodes, scene->_bvh._internalNodes,
-        scene->_pts, scene->_indices, scene->_geos, scene->_materials,
+void Render::render() {
+    cudaEvent_t startTime, endTime;
+    cudaEventCreate(&startTime);
+    cudaEventCreate(&endTime);
+    cudaEventRecord(startTime, 0);
+
+    rendKernel<<<_width*_height, _spp>>>(
+        _buffer, &_scene->_bvh, _scene->_bvh._leafNodes, _scene->_bvh._internalNodes,
+        _scene->_pts, _scene->_indices, _scene->_geos, _scene->_materials,
         _emitAreas, _emitAreaSum, _emitAreaNum, _emitAreaIds,
-        width, height, 40, maxTraceDepth);
+        _width, _height, 40, _maxTraceDepth, _onlyDirectLight);
+
+    cudaEventRecord(endTime, 0);
+    cudaEventSynchronize(startTime);
+    cudaEventSynchronize(endTime);
+
+    float time;
+    cudaEventElapsedTime(&time, startTime, endTime);
+    printf("Time (GPU) : %f ms \n", time);
+
+    cudaEventDestroy(startTime);
+    cudaEventDestroy(endTime);
 }
 
 __device__

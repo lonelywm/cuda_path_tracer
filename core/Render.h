@@ -4,8 +4,8 @@
 
 class Render {
 public:
-    
-    void rend(Scene* scene, int width, int height, int spp, int maxTraceDepth = 4);
+    void render();
+    void init(Scene* scene, int width, int height, int spp, int maxTraceDepth = 4, bool onlyDirectLight = false);
     void output();
 
     __device__
@@ -21,5 +21,9 @@ public:
     Vec3f* _buffer;
     int _width;
     int _height;
+    Scene* _scene;
+    int _spp = 4;
+    int _maxTraceDepth = 4;
+    bool _onlyDirectLight = false;
     std::vector<Vec3f> framebuffer;
 };
