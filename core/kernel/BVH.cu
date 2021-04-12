@@ -157,12 +157,21 @@ void computeMortonCodesKernel(uint* mCodes, uint* objIds, BoundingBox* boxs, int
     centroid.y = (centroid.y - min.y)/(max.y - min.y);
     centroid.z = (centroid.z - min.z)/(max.z - min.z);
     mCodes[idx] = morton3D(centroid.x, centroid.y, centroid.z);
-
-    // printf("Max(%f, %f, %f), Min(%f, %f, %f)\n", max.x, max.y, max.z, min.x, min.y, min.z);
-    // printf("BMax(%f, %f, %f), BMin(%f, %f, %f)\n", boxs[idx].Max.x, boxs[idx].Max.y, boxs[idx].Max.z,
-    //     boxs[idx].Min.x, boxs[idx].Min.y, boxs[idx].Min.z);
-    // printf("x(%f), y(%f), z(%f), [%08x]\n", centroid.x, centroid.y, centroid.z, mCodes[idx]);
 }
+
+// __global__
+// void checkMortonCodes(uint* mCodes, int numTri) {
+//     int idx = blockIdx.x * blockDim.x + threadIdx.x;
+//     if (idx >= numTri || idx == 0) return;
+
+//     if (idx >= 1) {
+//         uint pre = mCodes[idx - 1];
+//         uint now = mCodes[idx];
+//         if (pre == now) 
+//             printf("omg!!! morton duplicate!\n");
+//     }
+// }
+
 
 
 __global__ 
@@ -199,21 +208,13 @@ void generateHierarchyKernel(
     } else {
         childB = &internalNodes[split + 1];
     }
-    
-    // printf("idx: %03d spl: %03d CA(%02d) Leaf(%d) CB(%02d) Leaf(%d)\n", idx, split, split, isLeafA, split+1, isLeafB);
 
-    // printf("LeafA %02d Parent: %d (%d) \n", split, idx,   &internalNodes[idx]);
-    // printf("LeafB %02d Parent: %d (%d) \n", split+1, idx, &internalNodes[idx]);
 
     childA->Parent = &internalNodes[idx];
     childB->Parent = &internalNodes[idx];
     internalNodes[idx].ChildA = childA;
     internalNodes[idx].ChildB = childB;
 
-    // printf("split: %d", idx);
-    // printf("PA %d, ", childA->Parent);
-    // printf("PB %d, ", childB->Parent);
-    // printf("P %d     ", internalNodes[idx]);
 }
 
 __global__
@@ -223,9 +224,7 @@ void infoBBoxesKernel(BVHNode* leafNodes, BVHNode* internalNodes, int numTriangl
     if (idx >= numTriangles) return;
     
     BVHNode* node = &nodes[idx];
-    // printf("Leaf(%d) ObjId(%d), min(%0.4f, %0.4f, %0.4f) max(%0.4f, %0.4f, %0.4f) \n", 
-    //     idx, node->ObjectId, node->BBox.Min.x, node->BBox.Min.y, node->BBox.Min.z, node->BBox.Max.x, node->BBox.Max.y, node->BBox.Max.z
-    // );
+
 }
 
 __global__ 
@@ -237,45 +236,16 @@ void computeBBoxesKernel(BVHNode* leafNodes, BVHNode* internalNodes, int numTria
 
     BVHNode* Parent = leafNodes[idx].Parent;
 
-    // if (idx < numTriangles) {
-    //     printf("leaf: %d\n", leafNodes);
-    //     printf("inter: %d\n", internalNodes);
-    //     printf("Parent: %d\n", leafNodes[idx].Parent);
-    //     printf("ChildA: %d\n", leafNodes[idx].Parent->ChildA);
-    //     printf("ChildB: %d\n", leafNodes[idx].Parent->ChildB);
-    // }
-
-    // printf("%d", leafNodes[idx].BBox.isEmpty());
-    // printf("ChildAB (%d)\n", leafNodes[idx].Parent->ChildA->BBox.isEmpty());
-
     while(Parent)
     {
         if(!Parent->ChildA->BBox.isEmpty() && !Parent->ChildB->BBox.isEmpty())
         {
-            // Parent->BBox.bEmpty = true;
             Parent->BBox.merge(Parent->ChildA->BBox);
             Parent->BBox.merge(Parent->ChildB->BBox);
-            // printf("**********parent child relationships**********\n");
-            // printf(
-            //     "parent idx (%d), min(%0.4f, %0.4f, %0.4f) max(%0.4f, %0.4f, %0.4f) \n"
-            //     "childA leaf(%d) min(%0.4f, %0.4f, %0.4f) max(%0.4f, %0.4f, %0.4f) \n"
-            //     "childB leaf(%d) min(%0.4f, %0.4f, %0.4f) max(%0.4f, %0.4f, %0.4f) \n\n",
-            //     Parent - internalNodes, Parent->BBox.Min.x, Parent->BBox.Min.y, Parent->BBox.Min.z, Parent->BBox.Max.x, Parent->BBox.Max.y, Parent->BBox.Max.z,
-            //     Parent->ChildA->IsLeaf, Parent->ChildA->BBox.Min.x, Parent->ChildA->BBox.Min.y, Parent->ChildA->BBox.Min.z, Parent->ChildA->BBox.Max.x, Parent->ChildA->BBox.Max.y, Parent->ChildA->BBox.Max.z,
-            //     Parent->ChildB->IsLeaf, Parent->ChildB->BBox.Min.x, Parent->ChildB->BBox.Min.y, Parent->ChildB->BBox.Min.z, Parent->ChildB->BBox.Max.x, Parent->ChildB->BBox.Max.y, Parent->ChildB->BBox.Max.z
-            // );
             Parent = Parent->Parent;
         } else{
-            // printf(
-            //     "skip (%d), (%d), (%d) %d \n"
-            //     "min(%0.4f, %0.4f, %0.4f) max(%0.4f, %0.4f, %0.4f) \n\n",
-            //     Parent - internalNodes, Parent->ChildA->BBox.isEmpty(), Parent->ChildB->BBox.isEmpty(), Parent->ChildA,
-            //     Parent->ChildA->BBox.Min.x, Parent->ChildA->BBox.Min.y, Parent->ChildA->BBox.Min.z, 
-            //     Parent->ChildB->BBox.Min.x, Parent->ChildB->BBox.Min.y, Parent->ChildB->BBox.Min.z
-            // );
             break;
         }
-        // __syncthreads();
     }
 }
 
@@ -293,15 +263,6 @@ void setupLeafNodesKernel(uint* sorted_object_ids, BVHNode* leafNodes, BoundingB
 __global__ 
 void printfMortonCodes(uint* mortonCodes, int count) {
     for (int i=0; i<count; i++) {
-        // for (int j=0; j<32; j++) {
-        //     if (((int)mortonCodes[i] << j) & 1) {
-        //         printf("1");
-        //     } else {
-        //         printf("0");
-        //     }
-        // }
-        // printf("\n");
-        // printf("%x\n", mortonCodes[i]);
     }
 }
 
@@ -326,12 +287,14 @@ void BVH::setup(
         _mortonCodes, _objectIds, _bboxs, numTriangles, min, max
     );
 
-    // printf("min %4f, max: %4f", min.x, min.y, min.z);
-
     // 2. sort morton codes
     thrust::device_ptr<unsigned int> dev_mortonCodes(_mortonCodes);
     thrust::device_ptr<unsigned int> dev_object_ids(_objectIds);
     thrust::sort_by_key(dev_mortonCodes, dev_mortonCodes + numTriangles, dev_object_ids);
+
+    // checkMortonCodes<<<blocksPerGrid, threadsPerBlock>>>(
+    //     _mortonCodes, numTriangles
+    // );
 
     // 3. build tree
     setupLeafNodesKernel<<<blocksPerGrid, threadsPerBlock>>>(
@@ -341,9 +304,8 @@ void BVH::setup(
         _mortonCodes, _objectIds, _internalNodes, _leafNodes, numTriangles, _bboxs
     );
 
-    printfMortonCodes<<<1, 1>>>(_mortonCodes, numTriangles);
-
-    infoBBoxesKernel<<<blocksPerGrid, threadsPerBlock>>>(_leafNodes, _internalNodes, numTriangles);
+    // printfMortonCodes<<<1, 1>>>(_mortonCodes, numTriangles);
+    // infoBBoxesKernel<<<blocksPerGrid, threadsPerBlock>>>(_leafNodes, _internalNodes, numTriangles);
 
     computeBBoxesKernel<<<blocksPerGrid, threadsPerBlock>>>(
         _leafNodes, _internalNodes, numTriangles

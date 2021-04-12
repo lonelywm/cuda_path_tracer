@@ -59,7 +59,7 @@ public:
     __device__
     Intersection intersect(int idx, const Ray& ray, Point* pts, uint* indices, Geometry* geos, Material* materials, BVHNode* internalNodes, BVHNode* leafNodes) {
         Intersection isect;
-        BVHNode nodes[48];
+        BVHNode nodes[40];
         int ncount = 0;
         nodes[0] = *internalNodes[0].ChildA;
         nodes[1] = *internalNodes[0].ChildB;
@@ -71,10 +71,9 @@ public:
                     int index = node.ObjectId;
                     auto tri = Geometry(pts[indices[3*index]].Pos, pts[indices[3*index+1]].Pos, pts[indices[3*index+2]].Pos);
                     auto intersect = tri.intersect(ray);
-                    intersect.GeoId = index;
-
                     if (intersect.Happened && (!isect.Happened || (intersect.t > 0 && intersect.t < isect.t))  ) {
                         isect = intersect;
+                        isect.GeoId = index;
                     }
                 } else {
                     nodes[ncount]     = *node.ChildB;

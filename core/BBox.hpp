@@ -7,10 +7,11 @@
 struct BoundingBox {
 public:
     Vec3f Min, Max;
+    bool Inited = false;
     bool dirty = true;
 
     __host__ __device__
-    BoundingBox() {
+    BoundingBox(): Inited(true) {
         Real minNum = std::numeric_limits<Real>::lowest();
         Real maxNum = std::numeric_limits<Real>::max();
         Max = Vec3f(minNum, minNum, minNum);
@@ -18,31 +19,31 @@ public:
     }
     
     __host__ __device__
-    BoundingBox(CVec3f& p): Min(p), Max(p) {}
+    BoundingBox(CVec3f& p): Min(p), Max(p), Inited(true) {}
 
     __host__ __device__
-    BoundingBox(CVec3f& p0, CVec3f& p1, CVec3f& p2): Min(p0), Max(p0) {
+    BoundingBox(CVec3f& p0, CVec3f& p1, CVec3f& p2): Min(p0), Max(p0), Inited(true) {
         merge(p1);
         merge(p2);
     }
 
     __host__ __device__ __inline__
     bool isEmpty() {
-        auto D = Max - Min;
-        if (D.x < 0) { return true;}
-        if (D.y < 0) { return true;}
-        if (D.z < 0) { return true;}
-        if (D.x == 0 && D.y == 0 & D.z==0) { return true; }
-        return false;
+        return !Inited;
     }
 
     __host__ __device__ __inline__
     Vec3f getCentroid() {
         return (Min + Max) / 2.0f;
-    };
+    }
     
     __host__ __device__ __inline__
     void merge(CVec3f& p) {
+        if (!Inited) {
+            *this = p;
+            Inited = true;
+            return;
+        }
         if (p.x < Min.x) Min.x = p.x;
         if (p.x > Max.x) Max.x = p.x;
         if (p.y < Min.y) Min.y = p.y;
@@ -54,6 +55,11 @@ public:
     
     __host__ __device__ __inline__
     void merge(const BoundingBox& bbox) {
+        if (!Inited) {
+            *this = bbox;
+            Inited = true;
+            return;
+        }
         if (bbox.Min.x < Min.x) Min.x = bbox.Min.x;
         if (bbox.Max.x > Max.x) Max.x = bbox.Max.x;
         if (bbox.Min.y < Min.y) Min.y = bbox.Min.y;
@@ -64,8 +70,7 @@ public:
     }
 
     __host__ __device__
-    inline bool intersect(const Ray& ray, bool debug = false) const
-    {
+    inline bool intersect(const Ray& ray, bool debug = false) const {
         const auto& origin = ray.Pos;
         float tEnter = std::numeric_limits<Real>::lowest();
         float tExit  = std::numeric_limits<Real>::max();
@@ -91,7 +96,6 @@ public:
 
         }
 
-        
         return tEnter <= tExit && tExit >= 0;
     }
 };

@@ -76,7 +76,7 @@ struct Geometry {
     //     Nor = Nor.normalize();
     // }
 
-    __device__
+    __device__ __inline__
     Intersection intersect(const Ray& ray) {
         Intersection inter;
         if (ray.Dir.dot(Nor) > 0) {
@@ -113,7 +113,7 @@ struct Geometry {
         return inter;
     }
 
-    __device__
+    __device__ __inline__
     void sample(Intersection& isect, float &pdf, curandState& randState) {
         float x = curand_uniform(&randState);
         float y = curand_uniform(&randState);

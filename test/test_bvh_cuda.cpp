@@ -23,7 +23,7 @@ int main() {
     loaderActor.load(actor, "d:/resources/cornellbox/light.obj");
     // loaderActor.load(actor, "./cornellbox/shortbox.obj");
     // loaderActor.load(actor, "./cornellbox/tallbox.obj");
-    loaderActor.load(actor, "d:/resources/cornellbox/bunny.obj");
+    loaderActor.load(actor, "d:/resources/cornellbox/rubbertoy.obj");
 
     actor->Meshes[0]->Mtrl = matWhite;
     actor->Meshes[1]->Mtrl = matRed;

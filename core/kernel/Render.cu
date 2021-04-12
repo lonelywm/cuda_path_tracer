@@ -109,9 +109,9 @@ void rendKernel(
         raysNum++;
     }
 
-    //if (idx == 36428) {
-    //    idx = 36428;
-    //}
+    if (idx == 33414) {
+        idx = 33414;
+    }
 
     pixels[tid] = 0;
     while (!feedback && raysNum < maxTraceDepth) {
@@ -206,9 +206,9 @@ void rendKernel(
 
     if (tid == 0) {
         buf[idx] = pixels[0] / dpp;
-        //if (idx == 36428) {
-        //    buf[idx] = Vec3f(1, 0, 0);
-        //}
+        if (idx == 33414) {
+            buf[idx] = Vec3f(1, 0, 0);
+        }
     }
 
 }
