@@ -55,6 +55,7 @@ public:
     
     __host__ __device__ __inline__
     void merge(const BoundingBox& bbox) {
+        if (!bbox.Inited) return;
         if (!Inited) {
             *this = bbox;
             Inited = true;

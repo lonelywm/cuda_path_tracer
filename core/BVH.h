@@ -31,7 +31,7 @@ struct BVHNode {
 
 class BVH {
 public:
-    uint*    _mortonCodes;     // in device
+    uint64*  _mortonCodes;     // in device
     uint*    _objectIds;       // in device
     BVHNode* _leafNodes;       // in device
     BVHNode* _internalNodes;   // in device
@@ -74,6 +74,15 @@ public:
                     if (intersect.Happened && (!isect.Happened || (intersect.t > 0 && intersect.t < isect.t))  ) {
                         isect = intersect;
                         isect.GeoId = index;
+
+                    //    if (node.ObjectId > 40) {
+                    //         printf("#[ObjId: %d [%d] (%f %f %f) (%f %f %f) (%f %f %f)]\n", index, idx,
+                    //             pts[indices[3*index]].Pos.x, pts[indices[3*index]].Pos.y, pts[indices[3*index]].Pos.z, 
+                    //             pts[indices[3*index+1]].Pos.x, pts[indices[3*index+1]].Pos.y, pts[indices[3*index+1]].Pos.z, 
+                    //             pts[indices[3*index+2]].Pos.x, pts[indices[3*index+2]].Pos.y, pts[indices[3*index+2]].Pos.z
+                    //         );
+                    //     }
+
                     }
                 } else {
                     nodes[ncount]     = *node.ChildB;

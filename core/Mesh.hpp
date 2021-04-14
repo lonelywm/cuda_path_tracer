@@ -20,6 +20,22 @@ public:
     {
     }
 
+    void transfer(CVec3f& pos) {
+        for(auto& p: Points) {
+            p.Pos += pos;
+        }
+    }
+
+    void scale(CVec3f& s) {
+        Vec3f center;
+        for (auto& p: Points) {
+            center += p.Pos / Points.size();
+        }
+        for (auto& p: Points) {
+            p.Pos = center + (p.Pos - center) * s;
+        }
+    }
+
 // public:
 //     const BoundingBox& getBBox() {
 //         if (_bboxDirty) {

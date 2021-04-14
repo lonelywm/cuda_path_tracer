@@ -122,4 +122,13 @@ struct Geometry {
         pdf = 1.0f / Area;
     }
 
+    __device__ __inline__
+    void sampleCenter(Intersection& isect, float &pdf) {
+        float x = 2/3.0f;
+        float y = 0.5;
+        isect.Pos = Vs[0].Pos * (1.0f - x) + Vs[1].Pos * (x * (1.0f - y)) + Vs[2].Pos * (x * y);
+        isect.N = Nor;
+        pdf = 1.0f / Area;
+    }
+
 };

@@ -5,11 +5,10 @@
 class Render {
 public:
     void render();
+    void phong();
     void init(Scene* scene, int width, int height, int spp, int maxTraceDepth = 4, bool onlyDirectLight = false);
     void output();
 
-    __device__
-    void shade(const Intersection& isect, const Vec3f& indir);
 
 public:
     float* _emitAreas;        // device 发光面积

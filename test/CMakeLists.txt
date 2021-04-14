@@ -1,4 +1,5 @@
 FILE(GLOB HEADER_AND_SOURCE 
+    ${PROJECT_SOURCE_DIR}/core/*.h
     ${PROJECT_SOURCE_DIR}/core/*.hpp
     ${PROJECT_SOURCE_DIR}/core/kernel/*.cu
     ${PROJECT_SOURCE_DIR}/build/_deps/assimp-src/include/*.h

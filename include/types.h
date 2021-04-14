@@ -16,6 +16,8 @@ typedef float Real;
 #define HO __host__
 #define DE __device__
 using uint = unsigned int;
+using int64 = long long;
+using uint64 = unsigned long long;
 
 // #define printf(...) 
 

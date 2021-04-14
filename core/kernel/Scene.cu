@@ -37,7 +37,6 @@ __global__
 void computeBoundingBoxes_kernel(int numTriangles, Point* pts, uint* indices, BoundingBox* BBoxs){
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= numTriangles) return;
-    // TriangleIndices triangle{indices[idx*3], indices[idx*3 + 1], indices[idx*3 + 2]};
     BBoxs[idx] = BoundingBox(
         pts[indices[idx*3]].Pos,
         pts[indices[idx*3+1]].Pos,

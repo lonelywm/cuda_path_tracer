@@ -40,14 +40,36 @@ void sampleLight(
         int MatId = geos[index].MatId;
         if (MatId >= 0) {
             isect.Mtrl = materials[MatId];
-            // printf("M(%d, %d) ", index, MatId);
         }
-        // printf("sample succ\n");
     }
     
 }
 
-__global__ /* calculate all emitArea */
+
+__device__
+void sampleAveCenterLight(
+    Intersection &isect, float &pdf, Point* pts, Geometry* geos, Material* materials,
+    float* emitAreas, float& emitAreaSum, uint emitAreaNum, uint* emitAreaIds
+) {
+    pdf = 0;
+    Intersection isection;
+    float pdfTmp = 0;
+    for (int i = 0; i < emitAreaNum; i++) {
+        uint index = emitAreaIds[i];
+        geos[index].update(pts, materials).sampleCenter(isection, pdfTmp);
+        int MatId = geos[index].MatId;
+        if (MatId >= 0) {
+            isect.Mtrl = materials[MatId];
+        }
+        isect.Pos += isection.Pos / emitAreaNum;
+        isect.N = isection.N;
+        isect.t = isection.t / emitAreaNum;
+        pdf += pdfTmp / emitAreaNum;
+        isect.Happened = true;
+    }
+}
+
+__global__
 void calculateLightArea(
     float* emitAreas, uint* emitAreaIds, int triangles, Point* pts, uint* indices,
     Geometry* geos, Material* materials
@@ -63,8 +85,49 @@ void calculateLightArea(
     // TODO. 优化规约求和
 }
 
+
 __global__
-void rendKernel(
+void phongKernel(
+    Vec3f* buf, BVH* bvh, BVHNode* leafNodes, BVHNode* internalNodes,
+    Point* pts, uint* indices, Geometry* geos, Material* materials,
+    float* emitAreas, float emitAreaSum, uint emitAreaNum, uint* emitAreaIds,
+    int width, int height, float fov, int maxTraceDepth, bool onlyDirectLight
+) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x > width || y > height) return;
+    int idx = y * width + x;
+    const float EPS = 0.0001f;
+    float scale = tan(deg2rad(fov * 0.5));           // dep    / height
+    float imageAspectRatio = width / (float)height;  // width  / height
+	Vec3f eye_pos(278, 273, -800);                   // eye
+    float dx = 0.5;
+    float dy = 0.5;
+    float _x = ( 2 * (x + dx)/(float)width - 1 ) * imageAspectRatio * scale;
+    float _y = ( 2 * (y + dy)/(float)height - 1) * scale;
+    Vec3f dir(_x, -_y, 1);
+
+    dir = dir.normalize();
+    auto ray = Ray(eye_pos, dir);
+    Intersection isectObj = bvh->intersect(idx, ray, pts, indices, geos, materials, internalNodes, leafNodes);
+
+    Vec3f color;
+    if (isectObj.Happened) {
+        color = isectObj.Mtrl.kd * 0.1;
+        float pdf = 300;
+        float cos = isectObj.N.dot(-dir);
+        if (cos < 0) cos = 0;
+        float ke = 1000;
+        float r2 = isectObj.distance(ray.Dir) * isectObj.distance(ray.Dir);
+        Vec3f c = isectObj.Mtrl.kd * 2500 / r2 * cos * pdf;
+        color += c;
+    }
+    buf[idx] = color;
+}
+
+
+__global__
+void renderKernel(
     Vec3f* buf, BVH* bvh, BVHNode* leafNodes, BVHNode* internalNodes,
     Point* pts, uint* indices, Geometry* geos, Material* materials,
     float* emitAreas, float emitAreaSum, uint emitAreaNum, uint* emitAreaIds,
@@ -77,7 +140,7 @@ void rendKernel(
 
     const float EPS = 0.0001f;
 
-    if (idx > width * height) return;
+    if (idx >= width * height) return;
     int y = idx / width;
     int x = idx % width;
     float scale = tan(deg2rad(fov * 0.5));           // dep    / height
@@ -93,7 +156,7 @@ void rendKernel(
 
     float _x = ( 2 * (x + dx)/(float)width - 1 ) * imageAspectRatio * scale;
     float _y = ( 2 * (y + dy)/(float)height - 1) * scale;
-    Vec3f dir(-_x, -_y, 1);
+    Vec3f dir(_x, -_y, 1);
 
     // 用一组变量来将递归变成循环
     // 保留每一步结果的ray,乘法系数,递归深度,是否结束等
@@ -107,10 +170,6 @@ void rendKernel(
         dir = dir.normalize();
         rays[raysNum] = Ray(eye_pos, dir);
         raysNum++;
-    }
-
-    if (idx == 33414) {
-        idx = 33414;
     }
 
     pixels[tid] = 0;
@@ -186,17 +245,12 @@ void rendKernel(
     }  // end for
 
 
-    //if (raysNum >= 5) {
-    //    printf("");
-    //}
-
     Vec3f result;
     while (raysNum > 0) {
         result = result * alphas[raysNum-1] + beta[raysNum-1];
         raysNum--;
     }
     pixels[tid] = result;
-
 
     __syncthreads();
     for (int stride = dpp/2; stride>0; stride/=2) {
@@ -206,11 +260,10 @@ void rendKernel(
 
     if (tid == 0) {
         buf[idx] = pixels[0] / dpp;
-        if (idx == 33414) {
-            buf[idx] = Vec3f(1, 0, 0);
-        }
+        // if (idx == 47292) {
+        //     buf[idx] = Vec3f(0, 0, 1);
+        // }
     }
-
 }
 
 // Render ================================================
@@ -254,7 +307,7 @@ void Render::render() {
     cudaEventCreate(&endTime);
     cudaEventRecord(startTime, 0);
 
-    rendKernel<<<_width*_height, _spp>>>(
+    renderKernel<<<_width*_height, _spp>>>(
         _buffer, &_scene->_bvh, _scene->_bvh._leafNodes, _scene->_bvh._internalNodes,
         _scene->_pts, _scene->_indices, _scene->_geos, _scene->_materials,
         _emitAreas, _emitAreaSum, _emitAreaNum, _emitAreaIds,
@@ -272,9 +325,32 @@ void Render::render() {
     cudaEventDestroy(endTime);
 }
 
-__device__
-void Render::shade(const Intersection& isect, const Vec3f& indir) {
 
+void Render::phong() {
+    cudaEvent_t startTime, endTime;
+    cudaEventCreate(&startTime);
+    cudaEventCreate(&endTime);
+    cudaEventRecord(startTime, 0);
+
+    dim3 tile = dim3(16, 16);
+    dim3 block = dim3(_width + (tile.x - 1) / tile.x, _height + (tile.y - 1) / tile.y);
+
+    phongKernel<<<block, tile>>>(
+        _buffer, &_scene->_bvh, _scene->_bvh._leafNodes, _scene->_bvh._internalNodes,
+        _scene->_pts, _scene->_indices, _scene->_geos, _scene->_materials,
+        _emitAreas, _emitAreaSum, _emitAreaNum, _emitAreaIds,
+        _width, _height, 40, _maxTraceDepth, _onlyDirectLight);
+
+    cudaEventRecord(endTime, 0);
+    cudaEventSynchronize(startTime);
+    cudaEventSynchronize(endTime);
+
+    float time;
+    cudaEventElapsedTime(&time, startTime, endTime);
+    printf("Time (GPU) : %f ms \n", time);
+
+    cudaEventDestroy(startTime);
+    cudaEventDestroy(endTime);
 }
 
 void Render::output() {
