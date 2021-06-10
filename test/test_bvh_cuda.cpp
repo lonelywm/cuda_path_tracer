@@ -17,13 +17,13 @@ int main() {
     matWhite.kd = Vec3f(0.725f, 0.71f, 0.68f);
     matLight.ke = (8.0f * Vec3f(0.747f + 0.058f, 0.747f + 0.258f, 0.747f) + 15.6f * Vec3f(0.740f + 0.287f, 0.740f + 0.160f, 0.740f) + 18.4f * Vec3f(0.737f + 0.642f, 0.737f + 0.159f, 0.737f));
 
-    loaderActor.load(actor, "d:/resources/cornellbox/light.obj");
-    loaderActor.load(actor, "d:/resources/cornellbox/floor.obj");
-    loaderActor.load(actor, "d:/resources/cornellbox/left.obj");
-    loaderActor.load(actor, "d:/resources/cornellbox/right.obj");
-    loaderActor.load(actor, "d:/resources/cornellbox/shortbox.obj");
-    loaderActor.load(actor, "d:/resources/cornellbox/tallbox.obj");
-    loaderActor.load(actor, "d:/resources/cornellbox/face.obj");
+    loaderActor.load(actor, "../rc/cornellbox/light.obj");
+    loaderActor.load(actor, "../rc/cornellbox/floor.obj");
+    loaderActor.load(actor, "../rc/cornellbox/left.obj");
+    loaderActor.load(actor, "../rc/cornellbox/right.obj");
+    loaderActor.load(actor, "../rc/cornellbox/shortbox.obj");
+    loaderActor.load(actor, "../rc/cornellbox/tallbox.obj");
+    // loaderActor.load(actor, "../rc/cornellbox/face.obj");
 
     actor->Meshes[0]->Mtrl = matLight;
     actor->Meshes[1]->Mtrl = matWhite;
@@ -44,11 +44,13 @@ int main() {
 
     Render render;
 
-    render.init(&scene, 1024, 1024, 1, 6);
+    // render.init(&scene, 1024, 1024, 1, 6);
+    render.init(&scene, 512, 512, 64, 6);
     // render.init(&scene, 128, 128, 64, 6);
     // render.init(&scene, 32, 32, 16);
 
-    render.phong();
+    render.render();
+    // render.phong();
     
     render.output();
 

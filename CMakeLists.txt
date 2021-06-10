@@ -29,18 +29,18 @@ include(FetchContent)
 # FetchContent_MakeAvailable(Eigen)
 
 # assimp
-# FetchContent_Declare(assimp
-#     GIT_REPOSITORY https://github.com/assimp/assimp
-#     GIT_TAG v5.0.1)
-# set(ASSIMP_BUILD_TESTS OFF)
-# set(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
-# set(ASSIMP_INSTALL_PDB OFF)
-# FetchContent_MakeAvailable(assimp)
+FetchContent_Declare(assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp
+    GIT_TAG v5.0.1)
+set(ASSIMP_BUILD_TESTS OFF)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
+set(ASSIMP_INSTALL_PDB OFF)
+FetchContent_MakeAvailable(assimp)
 
-# # stb
-# FetchContent_Declare(stb
-#     GIT_REPOSITORY https://github.com/nothings/stb)
-# FetchContent_MakeAvailable(stb)
+# stb
+FetchContent_Declare(stb
+    GIT_REPOSITORY https://github.com/nothings/stb)
+FetchContent_MakeAvailable(stb)
 
 # include_directories(${PROJECT_SOURCE_DIR}/build/_deps/eigen-src)
 include_directories(${PROJECT_SOURCE_DIR}/build/_deps/assimp-src/include)
