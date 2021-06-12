@@ -1,10 +1,9 @@
 [![tag](https://img.shields.io/github/v/tag/lonelywm/cuda_path_tracer)](https://github.com/lonelywm/ability_system/tags)
 [![license](https://img.shields.io/github/license/lonelywm/cuda_path_tracer)](LICENSE) 
-
 ![avatar](https://github.com/lonelywm/cuda_path_tracer/blob/master/output/binary1024.png)
 
-## MPathTracing
-A CUDA Path Tracer
+## CUDA Path Tracer
+A tiny CUDA Path Tracer
 
 ## Feature
 1. Build BVH-Box in parallel using Morton Code
