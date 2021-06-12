@@ -4,6 +4,7 @@
 !/.gitignore
 !/CMakelists.txt
 !/LICENSE
+!/BugFix.md
 !/README.md
 
 !/core/**
