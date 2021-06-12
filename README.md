@@ -27,3 +27,6 @@ cmake --build . --config Release
 | 1024x1024    | 128  | 8                | 3060ti  | 29.5s  |
 | 512x512      | 64   | 7                | 3060ti  | 3.7s   |
 | 256x256      | 32   | 6                | 3060ti  | 0.4s   |
+
+## Compiler compatibility
+MSVC >= 19.20
