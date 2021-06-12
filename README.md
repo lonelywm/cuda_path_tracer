@@ -1,4 +1,4 @@
-[![tag](https://img.shields.io/github/v/tag/lonelywm/cuda_path_tracer)]
+[![tag](https://img.shields.io/github/v/tag/lonelywm/cuda_path_tracer)](https://github.com/lonelywm/ability_system/tags)
 [![license](https://img.shields.io/github/license/lonelywm/cuda_path_tracer)](LICENSE) 
 
 ![avatar](https://github.com/lonelywm/cuda_path_tracer/blob/master/output/binary1024.png)
