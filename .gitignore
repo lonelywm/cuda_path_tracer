@@ -8,7 +8,8 @@
 
 !/core/**
 !/include/**
-!/rc/**
+!/resource/**
+!/output/**
 !/test/**
 !/utils/**
 
