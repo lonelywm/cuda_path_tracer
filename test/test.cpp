@@ -17,13 +17,12 @@ int main() {
     matWhite.kd = Vec3f(0.725f, 0.71f, 0.68f);
     matLight.ke = (8.0f * Vec3f(0.747f + 0.058f, 0.747f + 0.258f, 0.747f) + 15.6f * Vec3f(0.740f + 0.287f, 0.740f + 0.160f, 0.740f) + 18.4f * Vec3f(0.737f + 0.642f, 0.737f + 0.159f, 0.737f));
 
-    loaderActor.load(actor, "../rc/cornellbox/light.obj");
-    loaderActor.load(actor, "../rc/cornellbox/floor.obj");
-    loaderActor.load(actor, "../rc/cornellbox/left.obj");
-    loaderActor.load(actor, "../rc/cornellbox/right.obj");
-    loaderActor.load(actor, "../rc/cornellbox/shortbox.obj");
-    loaderActor.load(actor, "../rc/cornellbox/tallbox.obj");
-    // loaderActor.load(actor, "../rc/cornellbox/face.obj");
+    loaderActor.load(actor, "./cornellbox/light.obj");
+    loaderActor.load(actor, "./cornellbox/floor.obj");
+    loaderActor.load(actor, "./cornellbox/left.obj");
+    loaderActor.load(actor, "./cornellbox/right.obj");
+    loaderActor.load(actor, "./cornellbox/shortbox.obj");
+    loaderActor.load(actor, "./cornellbox/tallbox.obj");
 
     actor->Meshes[0]->Mtrl = matLight;
     actor->Meshes[1]->Mtrl = matWhite;
@@ -31,10 +30,9 @@ int main() {
     actor->Meshes[3]->Mtrl = matGreen;
     actor->Meshes[4]->Mtrl = matWhite;
     actor->Meshes[5]->Mtrl = matWhite;
-    actor->Meshes[6]->Mtrl = matWhite;
-
-    actor->Meshes[6]->transfer(Vec3f(278, 273, 300));
-    actor->Meshes[0]->scale(Vec3f(2.4));
+    // actor->Meshes[6]->Mtrl = matWhite;
+    // actor->Meshes[6]->transfer(Vec3f(278, 273, 300));
+    // actor->Meshes[0]->scale(Vec3f(2.4));
 
     Scene scene;
     scene.Actors.push_back(actor);
@@ -44,17 +42,12 @@ int main() {
 
     Render render;
 
-    // render.init(&scene, 1024, 1024, 1, 6);
-    render.init(&scene, 512, 512, 64, 6);
-    // render.init(&scene, 128, 128, 64, 6);
-    // render.init(&scene, 32, 32, 16);
+    render.init(&scene, 1024, 1024, 128, 8);
+    // render.init(&scene, 512, 512, 64, 7);
+    // render.init(&scene, 256, 256, 32, 6);
 
     render.render();
-    // render.phong();
-    
     render.output();
-
-    printf("kernel:\n");
-    
+    printf("Done:\n");
     return 1;
 }

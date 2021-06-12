@@ -35,16 +35,4 @@ public:
             p.Pos = center + (p.Pos - center) * s;
         }
     }
-
-// public:
-//     const BoundingBox& getBBox() {
-//         if (_bboxDirty) {
-//             _bbox = BoundingBox();
-//             for (auto& tri: _triangles) {
-//                 _bbox.extand(tri.getBBox());
-//             }
-//             _bboxDirty = false;
-//         }
-//         return _bbox;
-//     }
 };

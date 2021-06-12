@@ -38,7 +38,6 @@ public:
     Point*   _pts;
     uint*    _indices;
 
-    // These are stored in the scene
     int              _numTriangles;
     Vec3f*           _vertices;
     BoundingBox*     _bboxs;
@@ -74,15 +73,6 @@ public:
                     if (intersect.Happened && (!isect.Happened || (intersect.t > 0 && intersect.t < isect.t))  ) {
                         isect = intersect;
                         isect.GeoId = index;
-
-                    //    if (node.ObjectId > 40) {
-                    //         printf("#[ObjId: %d [%d] (%f %f %f) (%f %f %f) (%f %f %f)]\n", index, idx,
-                    //             pts[indices[3*index]].Pos.x, pts[indices[3*index]].Pos.y, pts[indices[3*index]].Pos.z, 
-                    //             pts[indices[3*index+1]].Pos.x, pts[indices[3*index+1]].Pos.y, pts[indices[3*index+1]].Pos.z, 
-                    //             pts[indices[3*index+2]].Pos.x, pts[indices[3*index+2]].Pos.y, pts[indices[3*index+2]].Pos.z
-                    //         );
-                    //     }
-
                     }
                 } else {
                     nodes[ncount]     = *node.ChildB;
@@ -92,7 +82,6 @@ public:
             }
             ncount--;
         }
-        // printf("\nEND %f\n", isect.t);
         if (isect.Happened) {
             Geometry& geo = geos[isect.GeoId];
             isect.Mtrl = materials[geo.MatId];

@@ -9,7 +9,6 @@ public:
     void init(Scene* scene, int width, int height, int spp, int maxTraceDepth = 4, bool onlyDirectLight = false);
     void output();
 
-
 public:
     float* _emitAreas;        // device 发光面积
     float  _emitAreaSum = 0;  // 发光面积总数
